@@ -4,7 +4,7 @@
 
 from Adafruit_Thermal import *
 
-printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
+printer = Adafruit_Thermal(timeout=5)
 
 # Test inverse on & off
 printer.inverseOn()

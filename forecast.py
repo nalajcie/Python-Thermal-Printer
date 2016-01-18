@@ -45,7 +45,7 @@ config = ConfigParser.SafeConfigParser({'woeid': '2459115'}) # Default to NYC
 config.read('options.cfg')
 woeid = config.get('forecast', 'woeid')
 
-printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
+printer = Adafruit_Thermal(timeout=5)
 deg     = chr(0xf8) # Degree symbol on thermal printer
 
 # Fetch forecast data from Yahoo!, parse resulting XML

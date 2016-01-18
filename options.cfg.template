@@ -7,6 +7,8 @@ consumer-secret=<your twitter consumer secret>
 query-string=from:Adafruit
 
 [printer]
+device-name=/dev/ttyAMA0
+baudrate=19200
 # Defaults from Adafruit
 #heat-time=60
 #heat-dots=20

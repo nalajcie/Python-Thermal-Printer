@@ -38,6 +38,7 @@
 from __future__ import print_function
 from serial import Serial
 import time
+import ConfigParser
 
 class Adafruit_Thermal(Serial):
 
@@ -58,28 +59,34 @@ class Adafruit_Thermal(Serial):
 
 	def __init__(self, *args, **kwargs):
 		# Attempt to read printer options from config
-		heatTime = self.defaultHeatTime
-		heatDots = self.defaultHeatDots
-		heatInterval = self.defaultHeatInterval
+		self.heatTime = self.defaultHeatTime
+		self.heatDots = self.defaultHeatDots
+		self.heatInterval = self.defaultHeatInterval
+		baudrate = 19200
+		deviceName = "/dev/ttyAMA0"
 		try:
 			config = ConfigParser.SafeConfigParser({
-				'heat-time': str(heatTime),
-				'heat-dots': str(heatDots),
-				'heat-interval': str(heatInterval)
+				'device-name': str(deviceName),
+				'baudrate': str(baudrate),
+				'heat-time': str(self.heatTime),
+				'heat-dots': str(self.heatDots),
+				'heat-interval': str(self.heatInterval)
 			})
 			config.read('options.cfg')
-			heatTime = int(config.get('printer', 'heat-time'))
-			heatDots = int(config.get('printer', 'heat-dots'))
-			heatInterval = int(config.get('printer', 'heat-interval'))
-		except:
+			baudrate = int(config.get('printer', 'baudrate'))
+			deviceName = config.get('printer', 'device-name')
+			self.heatTime = int(config.get('printer', 'heat-time'))
+			self.heatDots = int(config.get('printer', 'heat-dots'))
+			self.heatInterval = int(config.get('printer', 'heat-interval'))
+		except Exception, e:
+			raise e
 			pass
 
-		# If no parameters given, use default port & baud rate.
-		# If only port is passed, use default baud rate.
+		# If no parameters given, use config/default port & baud rate.
+		# If only port is passed, use config/default baud rate.
 		# If both passed, use those values.
-		baudrate = 19200
 		if len(args) == 0:
-			args = [ "/dev/ttyAMA0", baudrate ]
+			args = [ deviceName, baudrate ]
 		elif len(args) == 1:
 			args = [ args[0], baudrate ]
 		else:
@@ -119,16 +126,14 @@ class Adafruit_Thermal(Serial):
 		# clear, but the slower printing speed.
 
 		# heattime argument overrides config
-		heatTime = kwargs.get('heattime', heatTime)
-
-		heatTime = kwargs.get('heattime', self.defaultHeatTime)
+		self.heatTime = kwargs.get('heattime', self.heatTime)
 
 		self.writeBytes(
 		  27,       # Esc
 		  55,       # 7 (print settings)
-		  heatDots, # Heat dots (20 = balance darkness w/no jams)
-		  heatTime, # Lib default = 45
-		  heatInterval) # Heat interval (500 uS = slower but darker)
+		  self.heatDots, # Heat dots (20 = balance darkness w/no jams)
+		  self.heatTime, # Lib default = 45
+		  self.heatInterval) # Heat interval (500 uS = slower but darker)
 
 		# Description of print density from page 23 of the manual:
 		# DC2 # n Set printing density
