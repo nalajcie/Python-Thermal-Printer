@@ -19,17 +19,20 @@ from __future__ import print_function
 from Adafruit_Thermal import *
 from xml.dom.minidom import parseString
 import Image, ImageDraw, time, urllib
+import ConfigParser
 
 # WOEID indicates the geographic location for the forecast.  It is
 # not a ZIP code or other common indicator.  Instead, it can be found
 # by 'manually' visiting http://weather.yahoo.com, entering a location
 # and requesting a forecast, then copy the number from the end of the
 # current URL string and paste it here.
-WOEID = '2459115'
+config = ConfigParser.SafeConfigParser({'woeid': '2459115'}) # Default to NYC
+config.read('options.cfg')
+woeid = config.get('forecast', 'woeid')
 
 # Fetch weather data from Yahoo!, parse resulting XML
 dom = parseString(urllib.urlopen(
-        'http://weather.yahooapis.com/forecastrss?w=' + WOEID).read())
+        'http://weather.yahooapis.com/forecastrss?w=' + woeid).read())
 
 # Extract values relating to current temperature, humidity, wind
 temperature = int(dom.getElementsByTagName(
