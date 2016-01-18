@@ -41,6 +41,11 @@ import time
 import ConfigParser
 
 class Adafruit_Thermal(Serial):
+	# ASCII const character codes used to send commands
+	ASCII_DC2 = 18
+	ASCII_ESC = 27
+	ASCII_FS  = 28
+	ASCII_GS  = 29
 
 	resumeTime      =  0.0
 	byteTime        =  0.0
@@ -129,8 +134,8 @@ class Adafruit_Thermal(Serial):
 		self.heatTime = kwargs.get('heattime', self.heatTime)
 
 		self.writeBytes(
-		  27,       # Esc
-		  55,       # 7 (print settings)
+		  self.ASCII_ESC,
+		  55,       # '7' (print settings)
 		  self.heatDots, # Heat dots (20 = balance darkness w/no jams)
 		  self.heatTime, # Lib default = 45
 		  self.heatInterval) # Heat interval (500 uS = slower but darker)
@@ -148,7 +153,7 @@ class Adafruit_Thermal(Serial):
 		printBreakTime =  4 # 500 uS
 
 		self.writeBytes(
-		  18, # DC2
+		  self.ASCII_DC2,
 		  35, # Print density
 		  (printBreakTime << 5) | printDensity)
 
@@ -239,12 +244,13 @@ class Adafruit_Thermal(Serial):
 	# but this is left here for compatibility with older
 	# code that might get ported directly from Arduino.
 	def begin(self, heatTime=defaultHeatTime):
+		self.heatTime = heatTime
 		self.writeBytes(
-		  27,       # Esc
-		  55,       # 7 (print settings)
-		  20,       # Heat dots (20 = balance darkness w/no jams)
-		  heatTime, # Lib default = 45
-		  250)      # Heat interval (500 uS = slower but darker)
+		  self.ASCII_ESC,
+		  55,       # '7' (print settings)
+		  self.heatDots, # Heat dots (20 = balance darkness w/no jams)
+		  self.heatTime, # Lib default = 45
+		  self.heatInterval) # Heat interval (500 uS = slower but darker)
 
 
 	def reset(self):
@@ -254,7 +260,7 @@ class Adafruit_Thermal(Serial):
 		self.charHeight    = 24
 		self.lineSpacing   =  8
 		self.barcodeHeight = 50
-		self.writeBytes(27, 64)
+		self.writeBytes(self.ASCII_ESC, 64)
 
 
 	# Reset text formatting parameters.
@@ -271,7 +277,7 @@ class Adafruit_Thermal(Serial):
 
 
 	def test(self):
-		self.writeBytes(18, 84)
+		self.writeBytes(self.ASCII_DC2, 84)
 		self.timeoutSet(
 		  self.dotPrintTime * 24 * 26 +
 		  self.dotFeedTime  * (8 * 26 + 32))
@@ -291,9 +297,9 @@ class Adafruit_Thermal(Serial):
 
 	def printBarcode(self, text, type):
 		self.writeBytes(
-		  29,  72, 2,    # Print label below barcode
-		  29, 119, 3,    # Barcode width
-		  29, 107, type) # Barcode type
+		  self.ASCII_GS,  72, 2,    # Print label below barcode
+		  self.ASCII_GS, 119, 3,    # Barcode width
+		  self.ASCII_GS, 107, type) # Barcode type
 		# Print string
 		self.timeoutWait()
 		self.timeoutSet((self.barcodeHeight + 40) * self.dotPrintTime)
@@ -305,7 +311,7 @@ class Adafruit_Thermal(Serial):
 		if val < 1:
 			val = 1
 		self.barcodeHeight = val
-		self.writeBytes(29, 104, val)
+		self.writeBytes(self.ASCII_GS, 104, val)
 
 
 	# === Character commands ===
@@ -342,7 +348,7 @@ class Adafruit_Thermal(Serial):
 			self.maxColumn  = 32
 
 	def writePrintMode(self):
-		self.writeBytes(27, 33, self.printMode)
+		self.writeBytes(self.ASCII_ESC, 33, self.printMode)
 
 	def normal(self):
 		self.printMode = 0
@@ -393,7 +399,7 @@ class Adafruit_Thermal(Serial):
 			pos = 2
 		else:
 			pos = 0
-		self.writeBytes(0x1B, 0x61, pos)
+		self.writeBytes(self.ASCII_ESC, 97, pos)
 
 
 	# Feeds by the specified number of lines
@@ -407,7 +413,7 @@ class Adafruit_Thermal(Serial):
 
 	# Feeds by the specified number of individual pixel rows
 	def feedRows(self, rows):
-		self.writeBytes(27, 74, rows)
+		self.writeBytes(self.ASCII_ESC, 74, rows)
 		self.timeoutSet(rows * dotFeedTime)
 
 
@@ -430,7 +436,7 @@ class Adafruit_Thermal(Serial):
 			self.charHeight = 24
 			self.maxColumn  = 32
 
-		self.writeBytes(29, 33, size, 10)
+		self.writeBytes(self.ASCII_GS, 33, size, 10)
 		prevByte = '\n' # Setting the size adds a linefeed
 
 
@@ -439,7 +445,7 @@ class Adafruit_Thermal(Serial):
 	# 1 - normal underline
 	# 2 - thick underline
 	def underlineOn(self, weight=1):
-		self.writeBytes(27, 45, weight)
+		self.writeBytes(self.ASCII_ESC, 45, weight)
 
 
 	def underlineOff(self):
@@ -469,7 +475,7 @@ class Adafruit_Thermal(Serial):
 				chunkHeight = maxChunkHeight
 
 			# Timeout wait happens here
-			self.writeBytes(18, 42, chunkHeight, rowBytesClipped)
+			self.writeBytes(self.ASCII_DC2, 42, chunkHeight, rowBytesClipped)
 
 			for y in range(chunkHeight):
 				for x in range(rowBytesClipped):
@@ -522,12 +528,12 @@ class Adafruit_Thermal(Serial):
 	# Take the printer offline. Print commands sent after this
 	# will be ignored until 'online' is called.
 	def offline(self):
-		self.writeBytes(27, 61, 0)
+		self.writeBytes(self.ASCII_ESC, 61, 0)
 
 
 	# Take the printer online. Subsequent print commands will be obeyed.
 	def online(self):
-		self.writeBytes(27, 61, 1)
+		self.writeBytes(self.ASCII_ESC, 61, 1)
 
 
 	# Put the printer into a low-energy state immediately.
@@ -538,14 +544,14 @@ class Adafruit_Thermal(Serial):
 	# Put the printer into a low-energy state after
 	# the given number of seconds.
 	def sleepAfter(self, seconds):
-		self.writeBytes(27, 56, seconds)
+		self.writeBytes(self.ASCII_ESC, 56, seconds)
 
 
 	def wake(self):
 		self.timeoutSet(0);
 		self.writeBytes(255)
 		for i in range(10):
-			self.writeBytes(27)
+			self.writeBytes(self.ASCII_ESC)
 			self.timeoutSet(0.1)
 
 
@@ -559,7 +565,7 @@ class Adafruit_Thermal(Serial):
 	# ability. Doesn't match the datasheet...
 	# Returns True for paper, False for no paper.
 	def hasPaper(self):
-		self.writeBytes(27, 118, 0)
+		self.writeBytes(self.ASCII_ESC, 118, 0)
 		# Bit 2 of response seems to be paper status
 		stat = ord(self.read(1)) & 0b00000100
 		# If set, we have paper; if clear, no paper
@@ -575,7 +581,7 @@ class Adafruit_Thermal(Serial):
 		# height when setting line height, making this more akin
 		# to inter-line spacing.  Default line spacing is 32
 		# (char height of 24, line spacing of 8).
-		self.writeBytes(27, 51, val)
+		self.writeBytes(self.ASCII_ESC, 51, val)
 
 
 	# Copied from Arduino lib for parity; is marked 'not working' there
@@ -585,7 +591,7 @@ class Adafruit_Thermal(Serial):
 
 	# Copied from Arduino lib for parity; is marked 'not working' there
 	def setCharSpacing(self, spacing):
-		self.writeBytes(27, 32, 0, 10)
+		self.writeBytes(self.ASCII_ESC, 32, 0, 10)
 
 
 	# Overloading print() in Python pre-3.0 is dirty pool,
