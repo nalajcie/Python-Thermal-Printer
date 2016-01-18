@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 # Main script for Adafruit Internet of Things Printer 2.  Monitors button
 # for taps and holds, performs periodic actions (Twitter polling by default)
 # and daily actions (Sudoku and weather by default).

@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 from Adafruit_Thermal import *
 
 printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)

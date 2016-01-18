@@ -1,14 +1,16 @@
 #!/usr/bin/python
 
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 # Weather forecast for Raspberry Pi w/Adafruit Mini Thermal Printer.
 # Retrieves data from Yahoo! weather, prints current conditions and
 # forecasts for next two days.  See timetemp.py for a different
 # weather example using nice bitmaps.
 # Written by Adafruit Industries.  MIT license.
-# 
+#
 # Required software includes Adafruit_Thermal and PySerial libraries.
 # Other libraries used are part of stock Python install.
-# 
+#
 # Resources:
 # http://www.adafruit.com/products/597 Mini Thermal Receipt Printer
 # http://www.adafruit.com/products/600 Printer starter pack

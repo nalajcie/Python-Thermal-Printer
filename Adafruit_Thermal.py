@@ -1,3 +1,5 @@
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 #*************************************************************************
 # This is a Python library for the Adafruit Thermal Printer.
 # Pick one up at --> http://www.adafruit.com/products/597

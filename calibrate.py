@@ -1,5 +1,7 @@
 #!/usr/bin/python
-#
+
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 # Thermal calibration utility for Adafruit_Thermal Python library.
 # Run this utility before using the printer for the first time, any
 # time a different power supply is used, or when using paper from a

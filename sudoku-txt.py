@@ -1,5 +1,7 @@
 #!/usr/bin/python
-#
+
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 # Sudoku Generator and Solver in 250 lines of python
 # Copyright (c) 2006 David Bau.  All rights reserved.
 #
@@ -157,7 +159,7 @@ def axismissing(board, x, axis):
     e = board[posfor(x, y, axis)]
     if e is not None: bits |= 1 << e
   return 511 ^ bits
-  
+
 def listbits(bits):
   return [y for y in xrange(9) if 0 != bits & 1 << y]
 

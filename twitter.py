@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 # This is a Python port of Adafruit's "Gutenbird" sketch for Arduino.
 # Polls one or more Twitter accounts for changes, displaying updates
 # on attached thermal printer.

@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# vim: tabstop=8 noexpandtab shiftwidth=8
+
 # Current time and temperature display for Raspberry Pi w/Adafruit Mini
 # Thermal Printer.  Retrieves data from Yahoo! weather, prints current
 # conditions and time using large, friendly graphics.
