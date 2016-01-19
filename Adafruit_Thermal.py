@@ -55,24 +55,27 @@ class Adafruit_Thermal(Serial):
 	column          =  0
 	maxColumn       = 32
 	charHeight      = 24
-	lineSpacing     =  8
+	lineSpacing     =  6
 	barcodeHeight   = 50
 	printMode       =  0
 	defaultHeatTime = 60
 	defaultHeatDots	= 20
 	defaultHeatInterval = 250
+	defaultFwVersion = 269
 
 	def __init__(self, *args, **kwargs):
 		# Attempt to read printer options from config
 		self.heatTime = self.defaultHeatTime
 		self.heatDots = self.defaultHeatDots
 		self.heatInterval = self.defaultHeatInterval
+		self.fwVer = self.defaultFwVersion
 		baudrate = 19200
 		deviceName = "/dev/ttyAMA0"
 		try:
 			config = ConfigParser.SafeConfigParser({
 				'device-name': str(deviceName),
 				'baudrate': str(baudrate),
+				'fw-version': str(self.fwVer),
 				'heat-time': str(self.heatTime),
 				'heat-dots': str(self.heatDots),
 				'heat-interval': str(self.heatInterval)
@@ -80,11 +83,12 @@ class Adafruit_Thermal(Serial):
 			config.read('options.cfg')
 			baudrate = int(config.get('printer', 'baudrate'))
 			deviceName = config.get('printer', 'device-name')
+			self.fwVer = int(config.get('printer', 'fw-version'))
 			self.heatTime = int(config.get('printer', 'heat-time'))
 			self.heatDots = int(config.get('printer', 'heat-dots'))
 			self.heatInterval = int(config.get('printer', 'heat-interval'))
 		except Exception, e:
-			raise e
+			raise e # for debug
 			pass
 
 		# If no parameters given, use config/default port & baud rate.
@@ -205,7 +209,9 @@ class Adafruit_Thermal(Serial):
 		self.timeoutWait()
 		self.timeoutSet(len(args) * self.byteTime)
 		for arg in args:
-			super(Adafruit_Thermal, self).write(chr(arg))
+			if type(arg) == int:
+				arg = chr(arg)
+			super(Adafruit_Thermal, self).write(arg)
 
 
 	# Override write() method to keep track of paper feed.
@@ -258,9 +264,14 @@ class Adafruit_Thermal(Serial):
 		self.column        =  0
 		self.maxColumn     = 32
 		self.charHeight    = 24
-		self.lineSpacing   =  8
+		self.lineSpacing   =  6
 		self.barcodeHeight = 50
 		self.writeBytes(self.ASCII_ESC, 64)
+		if self.fwVer > 264:
+			# Configure tab stops on recent printers
+			self.writeBytes(self.ASCII_ESC, 'D') # Set tab stops...
+			self.writeBytes( 4,  8, 12, 16) # ...every 4 columns,
+			self.writeBytes(20, 24, 28,  0) # 0 marks end-of-list.
 
 
 	# Reset text formatting parameters.
@@ -316,7 +327,7 @@ class Adafruit_Thermal(Serial):
 
 	# === Character commands ===
 
-	INVERSE_MASK       = (1 << 1)
+	INVERSE_MASK       = (1 << 1) # Not in 2.6.8 firmware (see inverseOn())
 	UPDOWN_MASK        = (1 << 2)
 	BOLD_MASK          = (1 << 3)
 	DOUBLE_HEIGHT_MASK = (1 << 4)
@@ -355,10 +366,16 @@ class Adafruit_Thermal(Serial):
 		self.writePrintMode()
 
 	def inverseOn(self):
-		self.setPrintMode(self.INVERSE_MASK)
+		if self.fwVer >= 268:
+			self.writeBytes(self.ASCII_GS, 'B', 1)
+		else:
+			self.setPrintMode(self.INVERSE_MASK)
 
 	def inverseOff(self):
-		self.unsetPrintMode(self.INVERSE_MASK)
+		if self.fwVer >= 268:
+			self.writeBytes(self.ASCII_GS, 'B', 0)
+		else:
+			self.unsetPrintMode(self.INVERSE_MASK)
 
 	def upsideDownOn(self):
 		self.setPrintMode(self.UPDOWN_MASK)
@@ -373,22 +390,40 @@ class Adafruit_Thermal(Serial):
 		self.unsetPrintMode(self.DOUBLE_HEIGHT_MASK)
 
 	def doubleWidthOn(self):
-		self.setPrintMode(self.DOUBLE_WIDTH_MASK)
+		if self.fwVer >= 268:
+			self.writeBytes(self.ASCII_ESC, 14, 1) # n is undefined in spec
+		else:
+			self.setPrintMode(self.DOUBLE_WIDTH_MASK)
 
 	def doubleWidthOff(self):
-		self.unsetPrintMode(self.DOUBLE_WIDTH_MASK)
+		if self.fwVer >= 268:
+			self.writeBytes(self.ASCII_ESC, 20, 1) # n is undefined in spec
+		else:
+			self.unsetPrintMode(self.DOUBLE_WIDTH_MASK)
 
 	def strikeOn(self):
-		self.setPrintMode(self.STRIKE_MASK)
+		if self.fwVer >= 268:
+			self.writeBytes(self.ASCII_ESC, 'G', 1)
+		else:
+			self.setPrintMode(self.STRIKE_MASK)
 
 	def strikeOff(self):
-		self.unsetPrintMode(self.STRIKE_MASK)
+		if self.fwVer >= 268:
+			self.writeBytes(self.ASCII_ESC, 'G', 0)
+		else:
+			self.unsetPrintMode(self.STRIKE_MASK)
 
 	def boldOn(self):
-		self.setPrintMode(self.BOLD_MASK)
+		if self.fwVer >= 268: # actually can be also set using setPrintMode
+			self.writeBytes(self.ASCII_ESC, 'E', 1)
+		else:
+			self.setPrintMode(self.BOLD_MASK)
 
 	def boldOff(self):
-		self.unsetPrintMode(self.BOLD_MASK)
+		if self.fwVer >= 268:
+			self.writeBytes(self.ASCII_ESC, 'E', 0)
+		else:
+			self.unsetPrintMode(self.BOLD_MASK)
 
 
 	def justify(self, value):
@@ -399,16 +434,21 @@ class Adafruit_Thermal(Serial):
 			pos = 2
 		else:
 			pos = 0
-		self.writeBytes(self.ASCII_ESC, 97, pos)
+		self.writeBytes(self.ASCII_ESC, 'a', pos)
 
 
 	# Feeds by the specified number of lines
 	def feed(self, x=1):
-		# The datasheet claims sending bytes 27, 100, <x> will work,
-		# but it feeds much more than that.  So it's done manually:
-		while x > 0:
-			self.write('\n')
-			x -= 1
+		if self.fwVer >= 264:
+			self.writeBytes(self.ASCII_ESC, 'd', x);
+			self.timeoutSet(self.dotFeedTime * self.charHeight);
+			self.prevByte = '\n';
+			self.column   =    0;
+		else:
+			# Feed manually; old firmware feeds excess lines
+			while x > 0:
+				self.write('\n')
+				x -= 1
 
 
 	# Feeds by the specified number of individual pixel rows
@@ -445,7 +485,8 @@ class Adafruit_Thermal(Serial):
 	# 1 - normal underline
 	# 2 - thick underline
 	def underlineOn(self, weight=1):
-		self.writeBytes(self.ASCII_ESC, 45, weight)
+		if weight > 2: weight = 2
+		self.writeBytes(self.ASCII_ESC, '-', weight)
 
 
 	def underlineOff(self):
@@ -544,15 +585,23 @@ class Adafruit_Thermal(Serial):
 	# Put the printer into a low-energy state after
 	# the given number of seconds.
 	def sleepAfter(self, seconds):
-		self.writeBytes(self.ASCII_ESC, 56, seconds)
+		if self.fwVer >= 264:
+			self.writeBytes(self.ASCII_ESC, '8', seconds, seconds >> 8)
+		else:
+			self.writeBytes(self.ASCII_ESC, '8', seconds)
 
 
 	def wake(self):
 		self.timeoutSet(0);
 		self.writeBytes(255)
-		for i in range(10):
-			self.writeBytes(self.ASCII_ESC)
-			self.timeoutSet(0.1)
+		if self.fwVer >= 264:
+			time.sleep(0.05) # sleep 50ms as in documentation
+			self.sleepAfter(0) # SLEEP OFF - IMPORTANT!
+		else:
+			# sleep longer, issule NULL commands (no-op)
+			for i in range(10):
+				self.writeBytes(0)
+				self.timeoutSet(0.1)
 
 
 	# Empty method, included for compatibility
@@ -579,19 +628,18 @@ class Adafruit_Thermal(Serial):
 
 		# The printer doesn't take into account the current text
 		# height when setting line height, making this more akin
-		# to inter-line spacing.  Default line spacing is 32
-		# (char height of 24, line spacing of 8).
-		self.writeBytes(self.ASCII_ESC, 51, val)
+		# to inter-line spacing.  Default line spacing is 30
+		# (char height of 24, line spacing of 6).
+		self.writeBytes(self.ASCII_ESC, '3', val)
 
 
-	# Copied from Arduino lib for parity; is marked 'not working' there
 	def tab(self):
-		self.writeBytes(9)
+		self.writeBytes('\t')
+		self.column = (self.column + 4) % self.maxColumn
 
 
-	# Copied from Arduino lib for parity; is marked 'not working' there
 	def setCharSpacing(self, spacing):
-		self.writeBytes(self.ASCII_ESC, 32, 0, 10)
+		self.writeBytes(self.ASCII_ESC, ' ', spacing)
 
 
 	# Overloading print() in Python pre-3.0 is dirty pool,
