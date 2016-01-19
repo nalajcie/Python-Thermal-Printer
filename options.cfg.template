@@ -12,6 +12,8 @@ baudrate=19200
 # set your printer firmware version as int (v2.68 = 268)
 # to obtain FW version hold the printer button when powering it on
 fw-version=269
+rtscts=[0 - not using RTS/CTS flow control, 1 - use DSR/DTR (better but requires printer DTR/RTS pin connected to CTS)]
+
 # Defaults from Adafruit
 #heat-time=60
 #heat-dots=20

@@ -30,6 +30,6 @@ for i in sys.argv[1:]:
 
 
     im.save("p.jpg", "jpeg")
-    printer.printImage(im, True)
+    printer.printImage(im, False)
     printer.feed(2)
 

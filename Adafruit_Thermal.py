@@ -71,11 +71,13 @@ class Adafruit_Thermal(Serial):
 		self.fwVer = self.defaultFwVersion
 		baudrate = 19200
 		deviceName = "/dev/ttyAMA0"
+		rtscts = False # safer default choice
 		try:
 			config = ConfigParser.SafeConfigParser({
 				'device-name': str(deviceName),
 				'baudrate': str(baudrate),
 				'fw-version': str(self.fwVer),
+				'rtscts': str(int(rtscts)),
 				'heat-time': str(self.heatTime),
 				'heat-dots': str(self.heatDots),
 				'heat-interval': str(self.heatInterval)
@@ -84,12 +86,15 @@ class Adafruit_Thermal(Serial):
 			baudrate = int(config.get('printer', 'baudrate'))
 			deviceName = config.get('printer', 'device-name')
 			self.fwVer = int(config.get('printer', 'fw-version'))
+			rtscts = int(config.get('printer', 'rtscts')) != 0
 			self.heatTime = int(config.get('printer', 'heat-time'))
 			self.heatDots = int(config.get('printer', 'heat-dots'))
 			self.heatInterval = int(config.get('printer', 'heat-interval'))
 		except Exception, e:
 			raise e # for debug
 			pass
+
+		rtscts = kwargs.get('rtscts', rtscts)
 
 		# If no parameters given, use config/default port & baud rate.
 		# If only port is passed, use config/default baud rate.
@@ -108,6 +113,15 @@ class Adafruit_Thermal(Serial):
 		self.byteTime = 11.0 / float(baudrate)
 
 		Serial.__init__(self, *args, **kwargs)
+
+		self.writeBytes(self.ASCII_GS, 'a', (1 << 5))
+
+		# ensure we're getting CTS flag as expected
+		self.rtscts = rtscts
+		if self.rtscts:
+			# enable RTS/CTS flow control on printer
+			self.writeBytes(self.ASCII_GS, 'a', (1 << 5))
+
 
 		# Remainder of this method was previously in begin()
 
@@ -153,8 +167,8 @@ class Adafruit_Thermal(Serial):
 		# Break time is n(D7-D5)*250us.
 		# (Unsure of the default value for either -- not documented)
 
-		printDensity   = 14 # 120% (can go higher, but text gets fuzzy)
-		printBreakTime =  4 # 500 uS
+		printDensity   = 14 # 50% + 5% * n = 120% (can go higher, but text gets fuzzy)
+		printBreakTime = 4 # * 250uS = 1000 uS
 
 		self.writeBytes(
 		  self.ASCII_DC2,
@@ -183,7 +197,11 @@ class Adafruit_Thermal(Serial):
 
 	# Waits (if necessary) for the prior task to complete.
 	def timeoutWait(self):
-		while (time.time() - self.resumeTime) < 0: pass
+		if self.rtscts:
+			# hardware flow control, we will sleep on byte sending
+			pass
+		else:
+			while (time.time() - self.resumeTime) < 0: pass
 
 
 	# Printer performance may vary based on the power supply voltage,
@@ -206,8 +224,9 @@ class Adafruit_Thermal(Serial):
 
 	# 'Raw' byte-writing method
 	def writeBytes(self, *args):
-		self.timeoutWait()
-		self.timeoutSet(len(args) * self.byteTime)
+		if not self.rtscts:
+			self.timeoutWait()
+			self.timeoutSet(len(args) * self.byteTime)
 		for arg in args:
 			if type(arg) == int:
 				arg = chr(arg)
@@ -500,8 +519,12 @@ class Adafruit_Thermal(Serial):
 		# (no feed gaps) on large images...but has the
 		# opposite effect on small images that would fit
 		# in a single 'chunk', so use carefully!
-		if LaaT: maxChunkHeight = 1
-		else:    maxChunkHeight = 255
+		if self.rtscts: maxChunkHeight = 255 # Buffer doesn't matter, handshake!
+		elif LaaT: maxChunkHeight = 1
+		else:
+			maxChunkHeight = 255 / rowBytesClipped
+			if maxChunkHeight > 255: maxChunkHeight = 255
+			elif maxChunkHeight < 1: maxChunkHeight = 1
 
 		i = 0
 		for rowStart in range(0, h, maxChunkHeight):
