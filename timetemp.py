@@ -18,7 +18,8 @@
 from __future__ import print_function
 from Adafruit_Thermal import *
 from xml.dom.minidom import parseString
-import Image, ImageDraw, time, urllib
+from PIL import Image, ImageDraw
+import time, urllib
 import ConfigParser
 
 # WOEID indicates the geographic location for the forecast.  It is

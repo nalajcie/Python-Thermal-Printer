@@ -536,7 +536,7 @@ class Adafruit_Thermal(Serial):
 	# the Imaging Library to perform such operations before
 	# passing the result to this function.
 	def printImage(self, image, LaaT=False):
-		import Image
+		from PIL import Image
 
 		if image.mode != '1':
 			image = image.convert('1')
