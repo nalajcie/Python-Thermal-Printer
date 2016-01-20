@@ -205,6 +205,9 @@ class Adafruit_Thermal(Serial):
 		else:
 			while (time.time() - self.resumeTime) < 0: pass
 
+	def forceTimeoutWait(self):
+		while (time.time() - self.resumeTime) < 0: pass
+
 
 	# Printer performance may vary based on the power supply voltage,
 	# thickness of paper, phase of the moon and other seemingly random
@@ -226,9 +229,8 @@ class Adafruit_Thermal(Serial):
 
 	# 'Raw' byte-writing method
 	def writeBytes(self, *args):
-		if not self.rtscts:
-			self.timeoutWait()
-			self.timeoutSet(len(args) * self.byteTime)
+		self.timeoutWait()
+		self.timeoutSet(len(args) * self.byteTime)
 		for arg in args:
 			if type(arg) == int:
 				arg = chr(arg)
@@ -333,9 +335,9 @@ class Adafruit_Thermal(Serial):
 		  self.ASCII_GS, 119, 3,    # Barcode width
 		  self.ASCII_GS, 107, type) # Barcode type
 		# Print string
-		self.timeoutWait()
 		self.timeoutSet((self.barcodeHeight + 40) * self.dotPrintTime)
 		super(Adafruit_Thermal, self).write(text)
+		self.forceTimeoutWait()
 		self.prevByte = '\n'
 		self.feed(2)
 
@@ -454,9 +456,9 @@ class Adafruit_Thermal(Serial):
 
 	# Feeds by the specified number of lines
 	def feed(self, x=1):
-		if self.fwVer >= 264:
+		if self.fwVer >= 270: # does not work with v2.69
 			self.writeBytes(self.ASCII_ESC, 'd', x);
-			self.timeoutSet(self.dotFeedTime * self.charHeight);
+			self.timeoutSet(x * self.dotFeedTime * self.charHeight);
 			self.prevByte = '\n';
 			self.column   =    0;
 		else:
@@ -467,6 +469,7 @@ class Adafruit_Thermal(Serial):
 
 
 	# Feeds by the specified number of individual pixel rows
+	# WARN: does not work whith mine v2.69
 	def feedRows(self, rows):
 		self.writeBytes(self.ASCII_ESC, 74, rows)
 		self.timeoutSet(rows * self.dotFeedTime)
@@ -568,6 +571,7 @@ class Adafruit_Thermal(Serial):
 				  chr(bitmap[i]))
 				i += 1
 			i += rowBytes - rowBytesClipped
+		self.timeoutSet(heightClipped * self.dotPrintTime)
 
 		self.prevByte = '\n'
 
