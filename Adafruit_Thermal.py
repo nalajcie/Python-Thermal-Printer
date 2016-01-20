@@ -545,6 +545,30 @@ class Adafruit_Thermal(Serial):
 
 		self.prevByte = '\n'
 
+
+	def printBitmap2(self, w, h, bitmap, LaaT=False):
+		""" Outputs bitmap as a single chunk """
+		rowBytes = (w + 7) / 8  # Round up to next byte boundary
+		rowBytesClipped = min(rowBytes, 48)  # 384 pixels max width
+		heightClipped = min(h, 4096) # MAX from  documentation
+
+		# output begin command:
+		# GS v 0 m xL xH yL yH d1...dk
+		mode = 0 # normal, density 203.2 DPI
+		self.writeBytes(self.ASCII_GS, 'v', '0', mode,
+				rowBytesClipped & 0xFF, rowBytesClipped >> 8,
+				heightClipped & 0xFF, heightClipped >> 8)
+
+		i = 0
+		for y in range(heightClipped):
+			for x in range(rowBytesClipped):
+				super(Adafruit_Thermal, self).write(
+				  chr(bitmap[i]))
+				i += 1
+			i += rowBytes - rowBytesClipped
+
+		self.prevByte = '\n'
+
 	# Print Image.  Requires Python Imaging Library.  This is
 	# specific to the Python port and not present in the Arduino
 	# library.  Image will be cropped to 384 pixels width if
@@ -580,7 +604,8 @@ class Adafruit_Thermal(Serial):
 					bit >>= 1
 				bitmap[n + b] = sum
 
-		self.printBitmap(width, height, bitmap, LaaT)
+		self.printBitmap2(width, height, bitmap)
+		#self.printBitmap(width, height, bitmap, LaaT)
 
 
 	# Take the printer offline. Print commands sent after this
