@@ -467,7 +467,7 @@ class Adafruit_Thermal(Serial):
 	# Feeds by the specified number of individual pixel rows
 	def feedRows(self, rows):
 		self.writeBytes(self.ASCII_ESC, 74, rows)
-		self.timeoutSet(rows * dotFeedTime)
+		self.timeoutSet(rows * self.dotFeedTime)
 
 
 	def flush(self):
