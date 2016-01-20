@@ -2,7 +2,7 @@
 
 from Adafruit_Thermal import *
 import sys
-from PIL import Image, ImageOps
+from PIL import Image
 
 max_width = 384
 #max_height = 512
@@ -24,6 +24,7 @@ for i in sys.argv[1:]:
         elif i[1] == 'u':
             upscale = 1
         continue
+
     im = Image.open(i)
 
     im = im.transpose(Image.ROTATE_90)#.transpose(Image.FLIP_TOP_BOTTOM)
