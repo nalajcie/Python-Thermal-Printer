@@ -69,11 +69,14 @@ class Adafruit_Thermal(Serial):
 		self.heatDots = self.defaultHeatDots
 		self.heatInterval = self.defaultHeatInterval
 		self.fwVer = self.defaultFwVersion
+		config = kwargs.pop("config", "options.cfg")
+
 		baudrate = 19200
 		deviceName = "/dev/ttyAMA0"
 		rtscts = False # safer default choice
+
 		try:
-			config = ConfigParser.SafeConfigParser({
+			conf = ConfigParser.SafeConfigParser({
 				'device-name': str(deviceName),
 				'baudrate': str(baudrate),
 				'fw-version': str(self.fwVer),
@@ -82,19 +85,24 @@ class Adafruit_Thermal(Serial):
 				'heat-dots': str(self.heatDots),
 				'heat-interval': str(self.heatInterval)
 			})
-			config.read('options.cfg')
-			baudrate = int(config.get('printer', 'baudrate'))
-			deviceName = config.get('printer', 'device-name')
-			self.fwVer = int(config.get('printer', 'fw-version'))
-			rtscts = int(config.get('printer', 'rtscts')) != 0
-			self.heatTime = int(config.get('printer', 'heat-time'))
-			self.heatDots = int(config.get('printer', 'heat-dots'))
-			self.heatInterval = int(config.get('printer', 'heat-interval'))
+			conf.read(config)
+			baudrate = int(conf.get('printer', 'baudrate'))
+			deviceName = conf.get('printer', 'device-name')
+			self.fwVer = int(conf.get('printer', 'fw-version'))
+			rtscts = int(conf.get('printer', 'rtscts')) != 0
+			self.heatTime = int(conf.get('printer', 'heat-time'))
+			self.heatDots = int(conf.get('printer', 'heat-dots'))
+			self.heatInterval = int(conf.get('printer', 'heat-interval'))
 		except Exception, e:
 			raise e # for debug
 			pass
 
-		rtscts = kwargs.get('rtscts', rtscts)
+		# heattime and rtscts arguments override config
+		# pop it from kwargs not to pass to Serial.__init__()
+		self.heatTime = kwargs.pop('heattime', self.heatTime)
+
+		if not "rtscts" in kwargs:
+			kwargs["rtscts"] = rtscts
 
 		# If no parameters given, use config/default port & baud rate.
 		# If only port is passed, use config/default baud rate.
@@ -114,10 +122,6 @@ class Adafruit_Thermal(Serial):
 
 		Serial.__init__(self, *args, **kwargs)
 
-		self.writeBytes(self.ASCII_GS, 'a', (1 << 5))
-
-		# ensure we're getting CTS flag as expected
-		self.rtscts = rtscts
 		if self.rtscts:
 			# enable RTS/CTS flow control on printer
 			self.writeBytes(self.ASCII_GS, 'a', (1 << 5))
@@ -148,8 +152,6 @@ class Adafruit_Thermal(Serial):
 		# blank page may occur.  The more heating interval, the more
 		# clear, but the slower printing speed.
 
-		# heattime argument overrides config
-		self.heatTime = kwargs.get('heattime', self.heatTime)
 
 		self.writeBytes(
 		  self.ASCII_ESC,
