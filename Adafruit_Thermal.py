@@ -94,12 +94,15 @@ class Adafruit_Thermal(Serial):
 			self.heatDots = int(conf.get('printer', 'heat-dots'))
 			self.heatInterval = int(conf.get('printer', 'heat-interval'))
 		except Exception, e:
-			raise e # for debug
+			#raise e # for debug
 			pass
 
 		# heattime and rtscts arguments override config
 		# pop it from kwargs not to pass to Serial.__init__()
-		self.heatTime = kwargs.pop('heattime', self.heatTime)
+		self.heatTime = kwargs.pop('heat_time', self.heatTime)
+		self.heatDots = kwargs.pop('heat_dots', self.heatDots)
+		self.heatInterval = kwargs.pop('heat_interval', self.heatInterval)
+		self.fwVer = kwargs.pop('fw_version', self.fwVer)
 
 		if not "rtscts" in kwargs:
 			kwargs["rtscts"] = rtscts
