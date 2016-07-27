@@ -27,7 +27,7 @@ for i in sys.argv[1:]:
 
     im = Image.open(i)
 
-    im = im.transpose(Image.ROTATE_90)#.transpose(Image.FLIP_TOP_BOTTOM)
+    #im = im.transpose(Image.ROTATE_90)#.transpose(Image.FLIP_TOP_BOTTOM)
 
     print("OLDSIZE", im.size)
     if im.size[0] > max_width or (upscale and im.size[0] < max_width):
